@@ -3,11 +3,15 @@ package volume1.chap14.section5;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Bank {
     private double[] accounts;
     private Lock lock;
     private Condition sufficientFunds;
+    private ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+    private Lock readLock = rwl.readLock();
+    private Lock writeLock = rwl.writeLock();
 
     public Bank(int n, double initialBalance) {
         accounts = new double[n];
@@ -63,25 +67,50 @@ public class Bank {
 //            lock.unlock();
 //        }
 //    }
-    // 第三个版本，使用synchronized关键字
-    public synchronized void transfer(int from, int to, double amount) throws InterruptedException {
-        while (accounts[from] < amount) {
-            wait();
+//    // 第三个版本，使用synchronized关键字
+//    public synchronized void transfer(int from, int to, double amount) throws InterruptedException {
+//        while (accounts[from] < amount) {
+//            wait();
+//        }
+//        System.out.print(Thread.currentThread());
+//        accounts[from] -= amount;
+//        System.out.printf(" %10.2f from %2d to %2d", amount, from, to);
+//        accounts[to] += amount;
+//        System.out.printf(" Total Balance: %10.2f\n", getTotalBalance());
+//        notifyAll();
+//    }
+//    // 第三个版本，使用synchronized关键字
+//    public synchronized double getTotalBalance() {
+//        double sum = 0.0;
+//        for (double a : accounts) {
+//            sum += a;
+//        }
+//        return sum;
+//    }
+    // 第四个版本
+    public void transfer(int from, int to, double amount) throws InterruptedException {
+        writeLock.lock();
+        try {
+            System.out.print(Thread.currentThread());
+            accounts[from] -= amount;
+            System.out.printf(" %10.2f from %2d to %2d", amount, from, to);
+            accounts[to] += amount;
+            System.out.printf(" Total Balance: %10.2f\n", getTotalBalance());
+        } finally {
+            writeLock.unlock();
         }
-        System.out.print(Thread.currentThread());
-        accounts[from] -= amount;
-        System.out.printf(" %10.2f from %2d to %2d", amount, from, to);
-        accounts[to] += amount;
-        System.out.printf(" Total Balance: %10.2f\n", getTotalBalance());
-        notifyAll();
     }
-    // 第三个版本，使用synchronized关键字
-    public synchronized double getTotalBalance() {
-        double sum = 0.0;
-        for (double a : accounts) {
-            sum += a;
+    public double getTotalBalance() {
+        readLock.lock();
+        try {
+            double sum = 0.0;
+            for (double a : accounts) {
+                sum += a;
+            }
+            return sum;
+        } finally {
+            readLock.unlock();
         }
-        return sum;
     }
     public int size() {
         return accounts.length;

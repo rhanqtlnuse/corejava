@@ -1,4 +1,4 @@
-package chap5.section2;
+package volume1.chap5.section2;
 
 public class CustomizedHashCode {
     public static void main(String[] args) {
